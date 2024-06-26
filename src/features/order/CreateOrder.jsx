@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { Form, redirect, useActionData, useNavigation } from 'react-router-dom';
 import { createOrder } from '../../services/apiRestaurant';
 import Button from '../../ui/Button';
+import EmptyCart from '../cart/EmptyCart';
 import { useDispatch, useSelector } from 'react-redux';
 import { clearCart, getCart, getTotalCartPrice } from '../cart/cartSlice';
-import EmptyCart from '../cart/EmptyCart';
 import store from '../../store';
 import { formatCurrency } from '../../utils/helpers';
 import { fetchAddress } from '../user/userSlice';
@@ -17,7 +17,6 @@ const isValidPhone = (str) =>
 
 function CreateOrder() {
   const [withPriority, setWithPriority] = useState(false);
-
   const {
     username,
     status: addressStatus,
@@ -26,6 +25,7 @@ function CreateOrder() {
     error: errorAddress,
   } = useSelector((state) => state.user);
   const isLoadingAddress = addressStatus === 'loading';
+
   const navigation = useNavigation();
   const isSubmitting = navigation.state === 'submitting';
 
@@ -85,17 +85,18 @@ function CreateOrder() {
               </p>
             )}
           </div>
-          {!position.latitude && !position.lonngitude && (
+
+          {!position.latitude && !position.longitude && (
             <span className="absolute right-[3px] top-[3px] z-50 md:right-[5px] md:top-[5px]">
               <Button
-                type="small"
                 disabled={isLoadingAddress}
+                type="small"
                 onClick={(e) => {
                   e.preventDefault();
                   dispatch(fetchAddress());
                 }}
               >
-                Get Position
+                Get position
               </Button>
             </span>
           )}
@@ -121,15 +122,16 @@ function CreateOrder() {
             type="hidden"
             name="position"
             value={
-              position.lonngitude && position.latitude
-                ? `${position.latitude},${position.lonngitude}`
+              position.longitude && position.latitude
+                ? `${position.latitude},${position.longitude}`
                 : ''
             }
           />
+
           <Button disabled={isSubmitting || isLoadingAddress} type="primary">
             {isSubmitting
               ? 'Placing order....'
-              : `Order now for ${formatCurrency(totalPrice)}`}
+              : `Order now from ${formatCurrency(totalPrice)}`}
           </Button>
         </div>
       </Form>
@@ -147,6 +149,8 @@ export async function action({ request }) {
     priority: data.priority === 'true',
   };
 
+  console.log(order);
+
   const errors = {};
   if (!isValidPhone(order.phone))
     errors.phone =
@@ -155,15 +159,12 @@ export async function action({ request }) {
   if (Object.keys(errors).length > 0) return errors;
 
   // If everything is okay, create new order and redirect
-
   const newOrder = await createOrder(order);
 
   // Do NOT overuse
   store.dispatch(clearCart());
 
   return redirect(`/order/${newOrder.id}`);
-
-  return null;
 }
 
 export default CreateOrder;
